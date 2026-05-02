@@ -1,0 +1,130 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:news_app/controllers/news_controller.dart';
+import 'package:news_app/routes/app_pages.dart';
+import 'package:news_app/widgets/category_chip.dart';
+import 'package:news_app/widgets/loading_shimmer.dart';
+import 'package:news_app/widgets/news_card.dart';
+
+class HomeView extends GetView<NewsController> {
+  const HomeView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('News App'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () {
+              _showSearchDialog(context);
+            },
+            icon: Icon(Icons.search_outlined),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            height: 60,
+            color: Colors.white,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              itemCount: controller.categories.length,
+              itemBuilder: (context, index) {
+                final category = controller.categories[index];
+                return Obx(
+                  () => CategoryChip(
+                    label: category.capitalize ?? 'No Category',
+                    isSelected: controller.selectedCategory == category,
+                    onTap: () {
+                      controller.selectCategory(category);
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading) {
+                return LoadingShimmer();
+                // return const Center(child: CircularProgressIndicator());
+              }
+              if (controller.articles.isEmpty) {
+                return Center(
+                  child: Text("Belum ada data ${controller.error}"),
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: controller.refreshNews,
+                child: ListView.builder(
+                  itemCount: controller.articles.length,
+                  itemBuilder: (context, index) {
+                    final article = controller.articles[index];
+                    return NewsCard(
+                      article: article,
+                      onTap: () {
+                        Get.toNamed(Routes.NEWS_DETAIL, arguments: article);
+                        // Get.snackbar(
+                        //   "Detail Berita",
+                        //   article.title ?? "",
+                        //   snackPosition: SnackPosition.BOTTOM,
+                        // );
+                      },
+                    );
+                  },
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSearchDialog(BuildContext context) {
+    final TextEditingController searchController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Search News'),
+            content: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'Enter search term...',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (value) {
+                if (value.isNotEmpty) {
+                  controller.searchNews(value);
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (searchController.text.isNotEmpty) {
+                    controller.searchNews(searchController.text);
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: Text('Search'),
+              ),
+            ],
+          ),
+    );
+  }
+}
